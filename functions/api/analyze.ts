@@ -3,7 +3,7 @@ import { buildPrompt } from '../../src/analysis/prompt-builder'
 import { LANGUAGES, EXPLANATION_LANGUAGES } from '../../src/analysis/languages'
 import { ANALYSIS_MODULES, allModuleDepths } from '../../src/analysis/modules'
 import { DEFAULT_ANALYSIS } from '../../src/analysis/presets'
-import { parseAnalysisResult } from '../../src/analysis/schemas'
+import { parseAnalysisResult, parseComparisonResult, parseCorrectionResult } from '../../src/analysis/schemas'
 import { PUBLIC_DAILY_LIMIT, PUBLIC_INPUT_LIMIT, PUBLIC_MINUTE_LIMIT } from '../../src/public-service/types'
 import type { AnalysisConfig, DetailLevel } from '../../src/types/config'
 import { boundedInteger, json, publicOutputCeiling, serviceAvailability, type PagesContextLike, type PublicEnv } from '../_lib/runtime'
@@ -28,6 +28,8 @@ const analysisSchema = z.object({
 
 const requestSchema = z.object({
   text: z.string().trim().min(1).max(PUBLIC_INPUT_LIMIT),
+  mode: z.enum(['analyze', 'correct', 'compare']).default('analyze'),
+  comparisonText: z.string().trim().max(PUBLIC_INPUT_LIMIT).optional(),
   analysis: analysisSchema,
   turnstileToken: z.string().min(1).max(4096),
 }).strict()
@@ -198,13 +200,17 @@ export async function onRequestPost({ request, env }: PagesContextLike) {
     const rawBody = await request.text()
     if (rawBody.length > 30000) throw new ApiError('请求内容过大。', 'payload_too_large', 413)
     const input = requestSchema.parse(JSON.parse(rawBody))
+    if (input.mode === 'compare' && !input.comparisonText) throw new ApiError('请填写要比较的另一种表达。', 'comparison_required', 400)
     await validateTurnstile(env, request, input.turnstileToken)
     const quota = await consumeQuota(env, request)
     const analysis = safeAnalysis(input.analysis)
     const maxTokens = outputBudget(analysis, env)
+    const sourceContent = input.mode === 'compare'
+      ? `<source_text>${input.text}</source_text>\n<comparison_text>${input.comparisonText}</comparison_text>`
+      : `<source_text>${input.text}</source_text>`
     const messages = [
-      { role: 'system', content: buildPrompt(input.text, analysis) },
-      { role: 'user', content: `<source_text>${input.text}</source_text>` },
+      { role: 'system', content: buildPrompt(input.text, analysis, input.mode) },
+      { role: 'user', content: sourceContent },
     ]
     let data = await callDeepSeek(env, messages, maxTokens, request.signal)
     const responses = [data]
@@ -217,7 +223,11 @@ export async function onRequestPost({ request, env }: PagesContextLike) {
     if (!raw) throw new ApiError('模型没有生成有效结果，请重试。', 'empty_response', 502)
     if (raw.includes(env.DEEPSEEK_API_KEY!)) throw new ApiError('模型结果触发安全检查，已阻止返回。', 'response_blocked', 502)
     let result
-    try { result = parseAnalysisResult(raw, input.text) } catch { throw new ApiError('模型返回格式不兼容，请重试。', 'invalid_model_response', 502) }
+    try {
+      result = input.mode === 'correct' ? parseCorrectionResult(raw, input.text)
+        : input.mode === 'compare' ? parseComparisonResult(raw, input.text, input.comparisonText ?? '')
+          : parseAnalysisResult(raw, input.text)
+    } catch { throw new ApiError('模型返回格式不兼容，请重试。', 'invalid_model_response', 502) }
     return json({ result, usage: usageOf(responses), quota })
   } catch (error) {
     if (error instanceof ApiError) return json({ error: { code: error.code, message: error.message } }, error.status, error.headers)

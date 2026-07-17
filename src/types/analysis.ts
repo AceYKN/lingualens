@@ -33,13 +33,51 @@ export interface AnalysisResult {
   [key: string]: unknown
 }
 
+export type TaskMode = 'analyze' | 'correct' | 'compare'
+export type CorrectionCategory = 'grammar' | 'word-choice' | 'spelling' | 'register'
+
+export interface CorrectionIssue {
+  range?: [number, number]
+  original: string
+  replacement?: string
+  category: CorrectionCategory
+  explanation: string
+}
+
+export interface CorrectionResult {
+  original: string
+  corrected: string
+  naturalVersion?: string
+  isCorrect: boolean
+  issues: CorrectionIssue[]
+}
+
+export interface ComparisonResult {
+  original: string
+  comparison: string
+  verdict: string
+  differences: Array<{ aspect: string; original: string; comparison: string; explanation: string }>
+}
+
+export type TaskResult = AnalysisResult | CorrectionResult | ComparisonResult
+
+export function isCorrectionResult(result: TaskResult): result is CorrectionResult {
+  return 'corrected' in result && 'isCorrect' in result
+}
+
+export function isComparisonResult(result: TaskResult): result is ComparisonResult {
+  return 'comparison' in result && 'differences' in result
+}
+
 export interface AnalysisRequest {
   text: string
   prompt: string
+  mode?: TaskMode
+  comparisonText?: string
 }
 
 export interface ProviderResponse {
-  result: AnalysisResult
+  result: TaskResult
   raw: string
   usage?: TokenUsage
 }

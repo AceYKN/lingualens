@@ -1,6 +1,6 @@
 import type { LLMProvider } from './types'
 import type { ProviderConfig } from '../types/config'
-import { parseAnalysisResult } from '../analysis/schemas'
+import { parseAnalysisResult, parseComparisonResult, parseCorrectionResult } from '../analysis/schemas'
 import { ProviderError, friendlyError } from './errors'
 
 interface ChatCompletionData {
@@ -95,7 +95,10 @@ export const openAICompatibleProvider: LLMProvider = {
   },
   async analyze(request, config, apiKey, signal) {
     try {
-      const messages = [{ role: 'system', content: request.prompt }, { role: 'user', content: `<source_text>${request.text}</source_text>` }]
+      const sourceContent = request.mode === 'compare'
+        ? `<source_text>${request.text}</source_text>\n<comparison_text>${request.comparisonText ?? ''}</comparison_text>`
+        : `<source_text>${request.text}</source_text>`
+      const messages = [{ role: 'system', content: request.prompt }, { role: 'user', content: sourceContent }]
       let data = await send(config, apiKey, messages, signal)
       const responses = [data]
       let raw = extractResponseText(data)
@@ -109,7 +112,12 @@ export const openAICompatibleProvider: LLMProvider = {
       if (!raw) throw emptyResponseError(data, true)
       if (apiKey && raw.includes(apiKey)) throw new ProviderError('模型结果意外包含 API Key，已阻止展示与导出。请立即轮换该 Key。', 'credential_echo')
       const usage = collectUsage(responses)
-      return { result: parseAnalysisResult(raw, request.text), raw, usage }
+      const result = request.mode === 'correct'
+        ? parseCorrectionResult(raw, request.text)
+        : request.mode === 'compare'
+          ? parseComparisonResult(raw, request.text, request.comparisonText ?? '')
+          : parseAnalysisResult(raw, request.text)
+      return { result, raw, usage }
     } catch (error) { throw friendlyError(error) }
   },
 }

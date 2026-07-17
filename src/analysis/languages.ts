@@ -1,3 +1,5 @@
+import { franc } from 'franc-min'
+
 export const LANGUAGES = [
   ['auto', '自动检测'], ['mixed', '混合语言'], ['en', '英语'], ['zh-CN', '中文'], ['ja', '日语'], ['ko', '韩语'],
   ['fr', '法语'], ['de', '德语'], ['es', '西班牙语'], ['it', '意大利语'], ['pt', '葡萄牙语'], ['ru', '俄语'], ['ar', '阿拉伯语'],
@@ -23,6 +25,12 @@ export function getLanguageStrategy(code: string): string {
   return strategies[code] ?? 'Use the source language’s own grammatical tradition and explain language-specific morphology, syntax, semantics, and pragmatics.'
 }
 
+const francLanguageMap: Record<string, string> = {
+  eng: 'en', cmn: 'zh-CN', jpn: 'ja', kor: 'ko', fra: 'fr', deu: 'de', spa: 'es', ita: 'it', por: 'pt', rus: 'ru', arb: 'ar',
+}
+
+const francSupportedLanguages = Object.keys(francLanguageMap)
+
 export function detectLanguageLocally(text: string): string {
   if (!text.trim()) return 'auto'
   const scripts = [
@@ -32,10 +40,15 @@ export function detectLanguageLocally(text: string): string {
   if (matched.includes('ja')) return 'ja'
   if (matched.length > 1) return 'mixed'
   if (matched.length === 1) return matched[0]
-  return /[a-zA-Z]/.test(text) ? 'en' : 'auto'
+
+  // Script alone cannot distinguish languages written with Latin letters.  Use
+  // franc's character-trigram models, constrained to the languages available
+  // in the UI, and leave very short/ambiguous input for the model to decide.
+  const letters = text.match(/\p{L}/gu)?.length ?? 0
+  if (letters < 10) return 'auto'
+  return francLanguageMap[franc(text, { only: francSupportedLanguages, minLength: 10 })] ?? 'auto'
 }
 
 export function isRtlLanguage(code: string): boolean {
   return ['ar', 'he', 'fa', 'ur'].includes(code)
 }
-

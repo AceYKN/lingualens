@@ -29,6 +29,22 @@ export const analysisResultSchema = z.object({
   examples: recordArray,
 }).passthrough()
 
+const correctionIssueSchema = z.object({
+  range: z.tuple([z.number().int().nonnegative(), z.number().int().nonnegative()]).optional(),
+  original: z.string(), replacement: z.string().optional(),
+  category: z.enum(['grammar', 'word-choice', 'spelling', 'register']), explanation: z.string(),
+}).passthrough()
+
+export const correctionResultSchema = z.object({
+  original: z.string().default(''), corrected: z.string().default(''), naturalVersion: z.string().optional(),
+  isCorrect: z.boolean().default(false), issues: z.array(correctionIssueSchema).max(100).default([]),
+}).passthrough()
+
+export const comparisonResultSchema = z.object({
+  original: z.string().default(''), comparison: z.string().default(''), verdict: z.string().default(''),
+  differences: z.array(z.object({ aspect: z.string(), original: z.string(), comparison: z.string(), explanation: z.string() }).passthrough()).max(100).default([]),
+}).passthrough()
+
 export function extractJson(raw: string): unknown {
   const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '')
   try { return JSON.parse(cleaned) } catch { /* continue */ }
@@ -46,4 +62,22 @@ export function parseAnalysisResult(raw: string, sourceText: string) {
     return valid ? segment : { ...segment, start: undefined, end: undefined }
   })
   return result
+}
+
+export function parseCorrectionResult(raw: string, sourceText: string) {
+  if (/<\/?(?:script|iframe|object|embed)\b/i.test(raw)) throw new Error('模型结果包含不安全的可执行标记，已阻止展示。')
+  const result = correctionResultSchema.parse(extractJson(raw))
+  result.original = sourceText
+  result.issues = result.issues.map((issue) => {
+    const range = issue.range
+    const valid = range !== undefined && range[0] >= 0 && range[0] <= range[1] && range[1] <= sourceText.length
+    return valid ? issue : { ...issue, range: undefined }
+  })
+  return result
+}
+
+export function parseComparisonResult(raw: string, sourceText: string, comparisonText: string) {
+  if (/<\/?(?:script|iframe|object|embed)\b/i.test(raw)) throw new Error('模型结果包含不安全的可执行标记，已阻止展示。')
+  const result = comparisonResultSchema.parse(extractJson(raw))
+  return { ...result, original: sourceText, comparison: comparisonText }
 }

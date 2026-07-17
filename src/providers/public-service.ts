@@ -1,5 +1,5 @@
-import { analysisResultSchema } from '../analysis/schemas'
-import type { PublicAnalysisOptions, PublicAnalysisResponse, PublicServiceConfig } from '../public-service/types'
+import { parseAnalysisResult, parseComparisonResult, parseCorrectionResult } from '../analysis/schemas'
+import type { PublicAnalysisOptions, PublicAnalysisResponse, PublicServiceConfig, PublicTaskOptions } from '../public-service/types'
 import { ProviderError, friendlyError } from './errors'
 
 export function toPublicAnalysisOptions(analysis: PublicAnalysisOptions): PublicAnalysisOptions {
@@ -47,6 +47,7 @@ export async function analyzeWithPublicService(
   text: string,
   analysis: PublicAnalysisOptions,
   turnstileToken: string,
+  task: PublicTaskOptions = { mode: 'analyze' },
   signal?: AbortSignal,
 ): Promise<PublicAnalysisResponse> {
   try {
@@ -54,10 +55,14 @@ export async function analyzeWithPublicService(
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ text, analysis: toPublicAnalysisOptions(analysis), turnstileToken }),
+      body: JSON.stringify({ text, analysis: toPublicAnalysisOptions(analysis), turnstileToken, ...task }),
     })
     const data = await jsonOrThrow(response) as unknown as PublicAnalysisResponse
-    return { ...data, result: analysisResultSchema.parse(data.result) }
+    const raw = JSON.stringify(data.result)
+    const result = task.mode === 'correct' ? parseCorrectionResult(raw, text)
+      : task.mode === 'compare' ? parseComparisonResult(raw, text, task.comparisonText ?? '')
+        : parseAnalysisResult(raw, text)
+    return { ...data, result: result as unknown as PublicAnalysisResponse['result'] }
   } catch (error) {
     throw friendlyError(error)
   }
