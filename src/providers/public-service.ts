@@ -2,6 +2,34 @@ import { analysisResultSchema } from '../analysis/schemas'
 import type { PublicAnalysisOptions, PublicAnalysisResponse, PublicServiceConfig } from '../public-service/types'
 import { ProviderError, friendlyError } from './errors'
 
+export function toPublicAnalysisOptions(analysis: PublicAnalysisOptions): PublicAnalysisOptions {
+  const {
+    sourceLanguage,
+    explanationLanguage,
+    translationLanguage,
+    preset,
+    detail,
+    learnerLevel,
+    terminology,
+    modules,
+    moduleDepths,
+    exampleCount,
+  } = analysis
+
+  return {
+    sourceLanguage,
+    explanationLanguage,
+    translationLanguage,
+    preset,
+    detail,
+    learnerLevel,
+    terminology,
+    modules: { ...modules },
+    moduleDepths: { ...moduleDepths },
+    exampleCount,
+  }
+}
+
 async function jsonOrThrow(response: Response) {
   const data = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null
   if (!response.ok) {
@@ -26,7 +54,7 @@ export async function analyzeWithPublicService(
       method: 'POST',
       signal,
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({ text, analysis, turnstileToken }),
+      body: JSON.stringify({ text, analysis: toPublicAnalysisOptions(analysis), turnstileToken }),
     })
     const data = await jsonOrThrow(response) as unknown as PublicAnalysisResponse
     return { ...data, result: analysisResultSchema.parse(data.result) }
