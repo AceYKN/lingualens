@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="语镜图标">
+  <defs><linearGradient id="g" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse"><stop stop-color="#477767"/><stop offset="1" stop-color="#244b3e"/></linearGradient></defs>
+  <rect x="3" y="3" width="58" height="58" rx="17" fill="url(#g)"/>
+  <path d="M18 19h28M23 19c1.2 12.4 7.3 21.4 19 27M41 19c-1.2 12.4-7.3 21.4-19 27M18 33h28" fill="none" stroke="#fffdf5" stroke-width="3.8" stroke-linecap="round"/>
+  <circle cx="48" cy="16" r="4.5" fill="#ef8b52" stroke="#fffdf5" stroke-width="2"/>
+</svg>
