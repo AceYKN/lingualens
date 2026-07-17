@@ -5,10 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:pages": "npm run build && wrangler pages dev",
     "build": "tsc -b && vite build",
+    "functions:check": "wrangler pages functions build functions --outdir output/functions-build-check --compatibility-date 2026-07-17",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && wrangler pages deploy"
   },
   "dependencies": {
     "lucide-react": "^1.25.0",
@@ -24,6 +27,7 @@
     "oxlint": "^1.71.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.10",
+    "wrangler": "^4.112.0"
   }
 }

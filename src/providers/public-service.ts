@@ -1,0 +1,36 @@
+import { analysisResultSchema } from '../analysis/schemas'
+import type { PublicAnalysisOptions, PublicAnalysisResponse, PublicServiceConfig } from '../public-service/types'
+import { ProviderError, friendlyError } from './errors'
+
+async function jsonOrThrow(response: Response) {
+  const data = await response.json().catch(() => null) as { error?: { code?: string; message?: string } } | null
+  if (!response.ok) {
+    throw new ProviderError(data?.error?.message ?? `公共服务暂时不可用 (${response.status})。`, data?.error?.code ?? 'public_service_error', response.status)
+  }
+  return data
+}
+
+export async function loadPublicServiceConfig(signal?: AbortSignal): Promise<PublicServiceConfig> {
+  const response = await fetch('/api/config', { signal, headers: { Accept: 'application/json' } })
+  return await jsonOrThrow(response) as unknown as PublicServiceConfig
+}
+
+export async function analyzeWithPublicService(
+  text: string,
+  analysis: PublicAnalysisOptions,
+  turnstileToken: string,
+  signal?: AbortSignal,
+): Promise<PublicAnalysisResponse> {
+  try {
+    const response = await fetch('/api/analyze', {
+      method: 'POST',
+      signal,
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ text, analysis, turnstileToken }),
+    })
+    const data = await jsonOrThrow(response) as unknown as PublicAnalysisResponse
+    return { ...data, result: analysisResultSchema.parse(data.result) }
+  } catch (error) {
+    throw friendlyError(error)
+  }
+}

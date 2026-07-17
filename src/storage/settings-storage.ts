@@ -2,9 +2,11 @@ import { z } from 'zod'
 import type { AppConfig } from '../types/config'
 import { DEFAULT_PROVIDER } from '../types/config'
 import { DEFAULT_ANALYSIS } from '../analysis/presets'
+import type { ConnectionMode } from '../public-service/types'
 
 const SETTINGS_KEY = 'lingualens:settings:v1'
 const API_KEY = 'lingualens:api-key:v1'
+const CONNECTION_MODE = 'lingualens:connection-mode:v1'
 
 export const defaultAppConfig = (): AppConfig => ({ version: 1, provider: { ...DEFAULT_PROVIDER }, analysis: { ...DEFAULT_ANALYSIS, modules: { ...DEFAULT_ANALYSIS.modules }, moduleDepths: { ...DEFAULT_ANALYSIS.moduleDepths } } })
 
@@ -34,5 +36,7 @@ export function saveSettings(config: AppConfig) {
 
 export function loadSavedApiKey() { return localStorage.getItem(API_KEY) ?? '' }
 export function saveApiKey(key: string) { if (key) localStorage.setItem(API_KEY, key); else localStorage.removeItem(API_KEY) }
-export function clearAllData() { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem(API_KEY) }
+export function loadConnectionMode(): ConnectionMode { return localStorage.getItem(CONNECTION_MODE) === 'byok' ? 'byok' : 'public' }
+export function saveConnectionMode(mode: ConnectionMode) { localStorage.setItem(CONNECTION_MODE, mode) }
+export function clearAllData() { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem(API_KEY); localStorage.removeItem(CONNECTION_MODE) }
 export function parseImportedConfig(raw: string): AppConfig { return importedSchema.parse(JSON.parse(raw)) }

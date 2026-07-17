@@ -1,12 +1,12 @@
-import { RotateCcw, SlidersHorizontal, X } from 'lucide-react'
+import { RotateCcw, ShieldCheck, SlidersHorizontal, X } from 'lucide-react'
 import { ANALYSIS_MODULES } from '../analysis/modules'
 import type { AnalysisConfig, DetailLevel, LearnerLevel, TerminologyLevel } from '../types/config'
 import { DEFAULT_PROMPT_TEMPLATE } from '../types/config'
 
-interface Props { open: boolean; config: AnalysisConfig; onClose: () => void; onChange: (config: AnalysisConfig) => void; onReset: () => void }
+interface Props { open: boolean; publicMode: boolean; config: AnalysisConfig; onClose: () => void; onChange: (config: AnalysisConfig) => void; onReset: () => void }
 const detailOptions: Array<[DetailLevel, string]> = [['minimal', '极简'], ['concise', '简洁'], ['standard', '标准'], ['detailed', '详细'], ['expert', '专家']]
 
-export function AdvancedSettings({ open, config, onClose, onChange, onReset }: Props) {
+export function AdvancedSettings({ open, publicMode, config, onClose, onChange, onReset }: Props) {
   if (!open) return null
   const update = <K extends keyof AnalysisConfig>(key: K, value: AnalysisConfig[K]) => onChange({ ...config, [key]: value })
   const updateModule = (id: string, checked: boolean) => onChange({ ...config, preset: 'custom', modules: { ...config.modules, [id]: checked } })
@@ -26,10 +26,11 @@ export function AdvancedSettings({ open, config, onClose, onChange, onReset }: P
         </div>)}</div>
       </section>
 
-      <section className="settings-section"><h3>自定义要求</h3><label className="field"><span>补充指令</span><textarea rows={4} value={config.customInstructions} onChange={(e) => update('customInstructions', e.target.value)} placeholder="例如：重点解释日语助词；所有语法点给出两个例句。" /></label></section>
-      <details className="advanced-block prompt-editor"><summary><SlidersHorizontal size={17} />系统 Prompt 模板</summary><p className="help-text">可用变量：{'{{sourceLanguage}}、{{explanationLanguage}}、{{translationLanguage}}、{{learnerLevel}}、{{detail}}、{{terminology}}、{{modules}}、{{languageStrategy}}、{{customInstructions}}'}</p><textarea rows={14} value={config.promptTemplate} onChange={(e) => update('promptTemplate', e.target.value)} /><div className="prompt-footer"><span>{config.promptTemplate.length.toLocaleString()} 字符 · Prompt V2.0</span><button className="text-button" onClick={() => update('promptTemplate', DEFAULT_PROMPT_TEMPLATE)}><RotateCcw size={15} />恢复默认模板</button></div></details>
+      {publicMode ? <div className="privacy-callout compact"><ShieldCheck size={18} /><div><strong>公共模式使用受保护的系统 Prompt</strong><p>为避免接口被改造成通用模型代理，公共服务不接收补充指令或自定义 Prompt。学习者水平、精细程度、术语偏好、模块与模块深度仍然有效；切换到自备 Key 后可编辑完整 Prompt。</p></div></div> : <>
+        <section className="settings-section"><h3>自定义要求</h3><label className="field"><span>补充指令</span><textarea rows={4} value={config.customInstructions} onChange={(e) => update('customInstructions', e.target.value)} placeholder="例如：重点解释日语助词；所有语法点给出两个例句。" /></label></section>
+        <details className="advanced-block prompt-editor"><summary><SlidersHorizontal size={17} />系统 Prompt 模板</summary><p className="help-text">可用变量：{'{{sourceLanguage}}、{{explanationLanguage}}、{{translationLanguage}}、{{learnerLevel}}、{{detail}}、{{terminology}}、{{modules}}、{{languageStrategy}}、{{customInstructions}}'}</p><textarea rows={14} value={config.promptTemplate} onChange={(e) => update('promptTemplate', e.target.value)} /><div className="prompt-footer"><span>{config.promptTemplate.length.toLocaleString()} 字符 · Prompt V2.0</span><button className="text-button" onClick={() => update('promptTemplate', DEFAULT_PROMPT_TEMPLATE)}><RotateCcw size={15} />恢复默认模板</button></div></details>
+      </>}
       <div className="drawer-footer"><button className="secondary-button" onClick={onReset}><RotateCcw size={17} />恢复默认分析设置</button><button className="primary-button" onClick={onClose}>完成设置</button></div>
     </aside>
   </div>
 }
-
