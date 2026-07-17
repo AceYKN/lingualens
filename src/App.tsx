@@ -57,6 +57,7 @@ function App() {
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<TestResult | null>(null)
   const [loading, setLoading] = useState(false)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const importRef = useRef<HTMLInputElement>(null)
@@ -92,6 +93,13 @@ function App() {
     return () => window.clearTimeout(timer)
   }, [notice])
 
+  useEffect(() => {
+    if (!loading) return
+    const startedAt = performance.now()
+    const timer = window.setInterval(() => setElapsedSeconds(Math.floor((performance.now() - startedAt) / 1000)), 250)
+    return () => window.clearInterval(timer)
+  }, [loading])
+
   const updateProvider = (next: ProviderConfig) => setAppConfig((current) => ({ ...current, provider: next }))
   const updateAnalysis = (next: AnalysisConfig) => setAppConfig((current) => ({ ...current, analysis: next }))
   const changeConnectionMode = (mode: ConnectionMode) => {
@@ -121,7 +129,7 @@ function App() {
       if (invalid) { setError(invalid); setProviderOpen(true); return }
     }
     if (!activeCount) { setError('请至少启用一个分析模块。'); setAdvancedOpen(true); return }
-    setError(''); setResult(null); setLastUsage(undefined); setActiveSegment(null); setLoading(true)
+    setError(''); setResult(null); setLastUsage(undefined); setActiveSegment(null); setElapsedSeconds(0); setLoading(true)
     const controller = new AbortController(); requestController.current = controller
     try {
       if (publicMode) {
@@ -204,7 +212,7 @@ function App() {
       </section>
 
       {error && <div className="error-banner" role="alert"><AlertTriangle size={20} /><span>{error}</span><button onClick={() => setError('')}>关闭</button></div>}
-      {loading && <section className="loading-state"><div className="analysis-loader"><LoaderCircle className="spin" size={28} /></div><div><h3>正在辨认结构与语义关系…</h3><p>{publicMode ? '请求经 Cloudflare 安全代理发往 DeepSeek' : `请求直接发往 ${provider.baseUrl.replace(/^https?:\/\//, '').split('/')[0]}`}</p></div></section>}
+      {loading && <section className="loading-state" aria-live="polite"><div className="analysis-loader"><LoaderCircle className="spin" size={28} /></div><div className="loading-copy"><h3>正在辨认结构与语义关系…</h3><p>{publicMode ? '请求经 Cloudflare 安全代理发往 DeepSeek' : `请求直接发往 ${provider.baseUrl.replace(/^https?:\/\//, '').split('/')[0]}`}</p></div><time className="elapsed-time" aria-label={`已等待 ${elapsedSeconds} 秒`}>{elapsedSeconds}s</time></section>}
 
       {(result || text) && <section className="source-panel"><div className="source-panel-label"><span>原文</span>{activeSegment && <small>正在定位：{activeSegment.text}</small>}</div><SourceHighlight text={text} active={activeSegment} direction={direction} /></section>}
       {result && <ResultView result={result} enabled={analysis.modules} usage={lastUsage} onSegmentHover={setActiveSegment} />}
