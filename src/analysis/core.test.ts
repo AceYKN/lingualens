@@ -5,6 +5,7 @@ import { DEFAULT_ANALYSIS } from './presets'
 import { parseAnalysisResult } from './schemas'
 import { defaultAppConfig, parseImportedConfig } from '../storage/settings-storage'
 import { estimateAnalysisTokens, estimateTextTokens } from '../utils/token-estimate'
+import { extractResponseText } from '../providers/openai-compatible'
 
 describe('local language detection', () => {
   it('recognizes CJK and RTL scripts', () => {
@@ -54,5 +55,13 @@ describe('token estimation', () => {
     expect(long.input).toBeGreaterThan(short.input)
     expect(long.totalHigh).toBeGreaterThan(short.totalHigh)
     expect(long.outputHigh).toBeLessThanOrEqual(3000)
+  })
+})
+
+describe('OpenAI-compatible response extraction', () => {
+  it('supports strings, content blocks and legacy text fields', () => {
+    expect(extractResponseText({ choices: [{ message: { content: ' {"ok":true} ' } }] })).toBe('{"ok":true}')
+    expect(extractResponseText({ choices: [{ message: { content: [{ type: 'text', text: '{"ok":true}' }] } }] })).toBe('{"ok":true}')
+    expect(extractResponseText({ choices: [{ text: '{"ok":true}' }] })).toBe('{"ok":true}')
   })
 })
