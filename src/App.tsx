@@ -76,7 +76,15 @@ function App() {
   const inputLimit = publicMode ? (publicConfig?.inputLimit ?? PUBLIC_INPUT_LIMIT) : analysis.maxInputLength
   const outputLimit = publicMode ? (publicConfig?.maxOutputTokens ?? 16000) : provider.maxTokens
   const effectiveAnalysis = useMemo(() => analysis.sourceLanguage === 'auto' ? { ...analysis, sourceLanguage: detectedLanguage === 'auto' ? 'auto' : detectedLanguage } : analysis, [analysis, detectedLanguage])
-  const tokenEstimate = useMemo(() => estimateAnalysisTokens(text.trim(), effectiveAnalysis, outputLimit), [text, effectiveAnalysis, outputLimit])
+  const tokenEstimate = useMemo(
+    () => estimateAnalysisTokens(text.trim(), effectiveAnalysis, outputLimit, taskMode, comparisonText.trim()),
+    [text, effectiveAnalysis, outputLimit, taskMode, comparisonText],
+  )
+  const publicServiceStatus = !publicConfig
+    ? '正在检查服务状态…'
+    : publicConfig.available
+      ? '已就绪 · 免费额度可用'
+      : '暂不可用 · 请使用自备 Key'
 
   useEffect(() => {
     const controller = new AbortController()
@@ -232,7 +240,7 @@ function App() {
         <aside className="control-card">
           <div className="card-heading compact-heading"><div><span className="step-number">02</span><div><h2>{taskMode === 'analyze' ? '选择分析视角' : taskMode === 'correct' ? '本次检查会关注' : '本次比较会关注'}</h2><p>{taskMode === 'analyze' ? '随时可以重新调整' : taskMode === 'correct' ? '语法、用词、拼写与语域' : '含义、自然度、语法与场景'}</p></div></div></div>
           {taskMode === 'analyze' ? <><div className="preset-list">{(Object.entries(PRESETS) as Array<[Exclude<PresetId, 'custom'>, typeof PRESETS.quick]>).map(([id, item]) => <button className={analysis.preset === id ? 'active' : ''} key={id} onClick={() => selectPreset(id)}><span className="radio-mark" /><span><strong>{item.label}分析</strong><small>{item.description}</small></span>{id === 'standard' && <em>推荐</em>}</button>)}</div><button className={`custom-preset ${analysis.preset === 'custom' ? 'active' : ''}`} onClick={() => setAdvancedOpen(true)}><SlidersHorizontal size={18} /><span><strong>自定义分析</strong><small>{activeCount} 个模块已开启</small></span><ChevronRight size={17} /></button></> : <div className="task-focus-card">{taskMode === 'correct' ? <><strong>准确 + 自然</strong><p>会区分错误与“虽正确但不够地道”的表达。</p></> : <><strong>逐项比较</strong><p>会说明两种表达在语义、语气和适用场景上的差别。</p></>}</div>}
-          <div className="model-summary"><span className="status-dot" /><div><small>{publicMode ? '服务状态' : '模型状态'}</small><strong>{publicMode ? publicConfig?.available ? '已就绪 · 免费额度可用' : '正在检查服务状态…' : apiKey ? '已就绪 · 可开始分析' : '尚未配置模型'}</strong></div></div>
+          <div className={`model-summary ${(publicMode && publicConfig?.available) || (!publicMode && apiKey) ? 'connected' : ''}`}><span className="status-dot" /><div><small>{publicMode ? '服务状态' : '模型状态'}</small><strong>{publicMode ? publicServiceStatus : apiKey ? '已就绪 · 可开始分析' : '尚未配置模型'}</strong></div></div>
           {text.trim() ? <div className="token-estimate">
             <div><span>本次 Token 预估</span>{text.trim() ? <strong>≈ {compactTokens(tokenEstimate.totalLow)}–{compactTokens(tokenEstimate.totalHigh)}</strong> : <strong>等待输入</strong>}</div>
             <p><span>输入约 {compactTokens(tokenEstimate.input)}</span><i /> <span>输出约 {compactTokens(tokenEstimate.outputLow)}–{compactTokens(tokenEstimate.outputHigh)}</span></p>

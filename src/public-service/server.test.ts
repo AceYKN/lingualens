@@ -42,6 +42,29 @@ describe('public service boundary', () => {
     await expect(response.json()).resolves.toMatchObject({ error: { code: 'invalid_request' } })
   })
 
+  it('still requires an enabled module for ordinary analysis', async () => {
+    const response = await onRequestPost({
+      request: new Request('https://example.com/api/analyze', {
+        method: 'POST',
+        headers: { Origin: 'https://example.com', 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.9' },
+        body: JSON.stringify({
+          text: 'A short sentence.', mode: 'analyze', turnstileToken: 'test-token',
+          analysis: {
+            sourceLanguage: 'en', explanationLanguage: 'zh-CN', translationLanguage: 'zh-CN', preset: 'custom', detail: 'concise',
+            learnerLevel: 'intermediate', terminology: 'explained', modules: {}, moduleDepths: {}, exampleCount: 1,
+          },
+        }),
+      }),
+      env: {
+        DEEPSEEK_API_KEY: 'server-only', TURNSTILE_SECRET_KEY: 'server-only', TURNSTILE_SITE_KEY: 'public-site-key',
+        QUOTA_KV: kv,
+      },
+    })
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({ error: { code: 'analysis_modules_required' } })
+  })
+
   it('accepts an allowlisted request and completes the Turnstile and DeepSeek flow', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -89,5 +112,50 @@ describe('public service boundary', () => {
     expect(body.result.summary.meaning).toBe('一个简短的句子。')
     expect(body.usage.totalTokens).toBe(120)
     expect(body.quota.dailyRemaining).toBe(49)
+  })
+
+  it('allows correction requests when analysis modules are disabled', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.includes('/turnstile/v0/siteverify')) {
+        return new Response(JSON.stringify({ success: true, action: 'analyze', hostname: 'example.com' }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }
+      if (url === 'https://api.deepseek.com/chat/completions') {
+        return new Response(JSON.stringify({
+          choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({
+            original: 'model-controlled', corrected: 'I like it.', isCorrect: false,
+            issues: [{ original: 'very like', replacement: 'like', category: 'grammar', explanation: 'Word order.' }],
+          }) } }],
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } })
+      }
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const response = await onRequestPost({
+      request: new Request('https://example.com/api/analyze', {
+        method: 'POST',
+        headers: { Origin: 'https://example.com', 'Content-Type': 'application/json', 'CF-Connecting-IP': '203.0.113.8' },
+        body: JSON.stringify({
+          text: 'I very like it.', mode: 'correct', turnstileToken: 'valid-token',
+          analysis: {
+            sourceLanguage: 'en', explanationLanguage: 'zh-CN', translationLanguage: 'zh-CN', preset: 'custom', detail: 'concise',
+            learnerLevel: 'intermediate', terminology: 'explained', modules: {}, moduleDepths: {}, exampleCount: 1,
+          },
+        }),
+      }),
+      env: {
+        DEEPSEEK_API_KEY: 'server-only', TURNSTILE_SECRET_KEY: 'server-only', TURNSTILE_SITE_KEY: 'public-site-key',
+        QUOTA_KV: kv,
+      },
+    })
+    const body = await response.json() as { result: { original: string; corrected: string } }
+
+    expect(response.status).toBe(200)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(body.result).toMatchObject({ original: 'I very like it.', corrected: 'I like it.' })
   })
 })

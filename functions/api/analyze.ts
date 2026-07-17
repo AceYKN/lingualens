@@ -21,7 +21,7 @@ const analysisSchema = z.object({
   detail: z.enum(detailLevels),
   learnerLevel: z.enum(['beginner-zero', 'beginner', 'intermediate', 'advanced', 'linguist']),
   terminology: z.enum(['plain', 'explained', 'professional']),
-  modules: z.record(z.string(), z.boolean()).refine((modules) => Object.keys(modules).every((id) => moduleIds.includes(id))).refine((modules) => Object.values(modules).some(Boolean)),
+  modules: z.record(z.string(), z.boolean()).refine((modules) => Object.keys(modules).every((id) => moduleIds.includes(id))),
   moduleDepths: z.record(z.string(), z.enum(detailLevels)).refine((depths) => Object.keys(depths).every((id) => moduleIds.includes(id))),
   exampleCount: z.number().int().min(0).max(5),
 }).strict()
@@ -201,6 +201,9 @@ export async function onRequestPost({ request, env }: PagesContextLike) {
     if (rawBody.length > 30000) throw new ApiError('请求内容过大。', 'payload_too_large', 413)
     const input = requestSchema.parse(JSON.parse(rawBody))
     if (input.mode === 'compare' && !input.comparisonText) throw new ApiError('请填写要比较的另一种表达。', 'comparison_required', 400)
+    if (input.mode === 'analyze' && !Object.values(input.analysis.modules).some(Boolean)) {
+      throw new ApiError('请至少启用一个分析模块。', 'analysis_modules_required', 400)
+    }
     await validateTurnstile(env, request, input.turnstileToken)
     const quota = await consumeQuota(env, request)
     const analysis = safeAnalysis(input.analysis)

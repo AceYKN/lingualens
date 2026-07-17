@@ -41,6 +41,6 @@ describe('public service request serialization', () => {
     const response = await analyzeWithPublicService('Test.', DEFAULT_ANALYSIS, 'turnstile-token')
 
     expect(fetchMock).toHaveBeenCalledOnce()
-    expect(response.result.summary.meaning).toBe('测试')
+    expect(response.result).toMatchObject({ summary: { meaning: '测试' } })
   })
 })

@@ -85,6 +85,13 @@ describe('token estimation', () => {
     expect(long.totalHigh).toBeGreaterThan(short.totalHigh)
     expect(long.outputHigh).toBeLessThanOrEqual(3000)
   })
+
+  it('includes both expressions when estimating comparison requests', () => {
+    const short = estimateAnalysisTokens('Hello.', DEFAULT_ANALYSIS, 3000, 'compare', 'Hi.')
+    const long = estimateAnalysisTokens('Hello.', DEFAULT_ANALYSIS, 3000, 'compare', 'A much longer comparison expression. '.repeat(30))
+    expect(long.input).toBeGreaterThan(short.input)
+    expect(long.totalHigh).toBeGreaterThan(short.totalHigh)
+  })
 })
 
 describe('OpenAI-compatible response extraction', () => {

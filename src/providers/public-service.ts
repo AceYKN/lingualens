@@ -62,7 +62,7 @@ export async function analyzeWithPublicService(
     const result = task.mode === 'correct' ? parseCorrectionResult(raw, text)
       : task.mode === 'compare' ? parseComparisonResult(raw, text, task.comparisonText ?? '')
         : parseAnalysisResult(raw, text)
-    return { ...data, result: result as unknown as PublicAnalysisResponse['result'] }
+    return { ...data, result }
   } catch (error) {
     throw friendlyError(error)
   }

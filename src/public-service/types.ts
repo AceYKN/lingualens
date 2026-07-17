@@ -1,5 +1,5 @@
 import type { AnalysisConfig } from '../types/config'
-import type { AnalysisResult, TaskMode, TokenUsage } from '../types/analysis'
+import type { TaskMode, TaskResult, TokenUsage } from '../types/analysis'
 
 export const PUBLIC_INPUT_LIMIT = 500
 export const PUBLIC_MINUTE_LIMIT = 10
@@ -29,7 +29,7 @@ export interface PublicQuota {
 }
 
 export interface PublicAnalysisResponse {
-  result: AnalysisResult
+  result: TaskResult
   usage?: TokenUsage
   quota: PublicQuota
 }
