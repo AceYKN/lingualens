@@ -70,3 +70,55 @@ footer{border-top:1px solid rgba(83,103,94,.13);height:80px;padding:0 max(24px,c
 .task-results{margin:28px 0 70px}.correction-summary,.comparison-summary{border-radius:22px;padding:29px 32px;color:white;background:#546f61}.correction-summary.correct{background:#3f775b}.comparison-summary{background:#57677d}.correction-title{display:flex;gap:12px;align-items:flex-start}.correction-title>svg{margin-top:6px;flex:0 0 auto}.correction-title h2{font-size:clamp(21px,3vw,31px);line-height:1.35;margin:6px 0 0}.correction-summary>p{margin:13px 0 0 38px;color:#d9e7df;font-size:13px}.task-toolbar{display:flex;align-items:flex-end;justify-content:space-between;padding:26px 4px 14px}.task-toolbar h3{margin:0 0 4px;font-size:18px}.task-toolbar p{margin:0;color:var(--muted);font-size:11px}.diff-board{border:1px solid #dfe5e0;border-radius:15px;overflow:hidden;background:#fbfcfa}.diff-line{display:grid;grid-template-columns:39px 1fr;align-items:start;font-size:15px;line-height:1.7;padding:13px 15px}.diff-line>span{font-family:ui-monospace,monospace;font-weight:800;text-align:center}.diff-line code{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace}.diff-line.removed{background:#fff3f1;color:#8d453d}.diff-line.added{background:#eff9f1;color:#286746}.diff-arrow{display:flex;align-items:center;gap:6px;padding:8px 18px;background:#f7f8f5;color:#75827c;font-size:11px;border-top:1px solid #e7ebe7;border-bottom:1px solid #e7ebe7}.natural-version{display:grid;grid-template-columns:1fr auto;gap:7px 16px;align-items:center;margin-top:12px;padding:15px 17px;background:#eef4ef;border:1px solid #d7e4da;border-radius:14px}.natural-version span{font-size:10px;color:var(--sage);font-weight:700;letter-spacing:.08em}.natural-version p{grid-row:2;margin:0;color:#385548;font-size:15px;line-height:1.6}.natural-version button{grid-row:1/3;grid-column:2}.issue-heading{padding-top:27px}.issue-list{display:grid;gap:9px}.issue-list article{border:1px solid #e1e6e2;background:#fffefa;border-radius:14px;padding:15px 17px}.issue-list header{display:flex;align-items:center;gap:8px}.issue-list header small{color:#8b9690;font-size:10px}.issue-category{display:inline-flex;align-items:center;border-radius:20px;padding:4px 8px;font-size:10px;font-weight:700}.issue-category.grammar{background:#f5e7c9;color:#896717}.issue-category.word-choice{background:#dcebef;color:#286779}.issue-category.spelling{background:#f7dfdc;color:#963f38}.issue-category.register{background:#e6e0f2;color:#5d4a87}.issue-change{display:flex;align-items:center;gap:9px;margin-top:10px;color:#607068}.issue-change code{padding:4px 7px;border-radius:6px;background:#f3f5f2;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}.issue-list article>p{margin:10px 0 0;color:#5e6d65;font-size:12px;line-height:1.65}.no-issues{display:flex;align-items:center;gap:8px;padding:18px;border:1px solid #cfe5d5;border-radius:14px;background:#eff8f1;color:#3b7654;font-size:13px}.comparison-expressions{display:grid;grid-template-columns:1fr 1fr;gap:11px}.comparison-expressions>div{position:relative;padding:16px 17px;background:#f4f6f3;border:1px solid #e0e5e1;border-radius:14px}.comparison-expressions span{font-size:10px;color:#728078;font-weight:700}.comparison-expressions p{font-size:15px;line-height:1.6;margin:8px 0 14px;white-space:pre-wrap}.comparison-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.comparison-row>div{padding:9px;background:#f4f6f3;border-radius:8px}.comparison-row small{color:var(--sage);font-weight:700}.comparison-row p{margin:4px 0 0;font-size:12px;line-height:1.5}
 @media(max-width:520px){.task-mode-tabs button{font-size:11px;padding:8px 4px}.comparison-input{height:100px}.correction-summary,.comparison-summary{padding:23px 20px;border-radius:17px}.task-toolbar{padding-top:20px}.natural-version{grid-template-columns:1fr}.natural-version button{grid-row:auto;grid-column:auto;justify-self:start}.comparison-expressions,.comparison-row{grid-template-columns:1fr}.diff-line{grid-template-columns:26px 1fr;padding:12px 10px}.task-results{margin-top:24px}}
 @media(prefers-color-scheme:dark){.task-mode-tabs{background:#1b2922}.task-mode-tabs button.active{background:#2a3a32}.task-focus-card{background:#25372d;border-color:#3a5144}.task-focus-card p{color:#bdcbc3}.diff-board{background:#202a24;border-color:#39463f}.diff-line.removed{background:#412927;color:#efb8b1}.diff-line.added{background:#203b2a;color:#b9e4c6}.diff-arrow{background:#222d27;border-color:#39463f}.natural-version{background:#25372d;border-color:#3a5144}.natural-version p{color:#d1e3d7}.issue-list article,.comparison-expressions>div{background:#222c27;border-color:#39463f}.issue-list article>p{color:#bfcbc4}.issue-change code,.comparison-row>div{background:#1b2520}.no-issues{background:#203b2a;border-color:#376a4b}.task-mode-tabs button{color:#b3c1b9}}
+
+/* Keep late light-theme refinements from reducing contrast in dark mode. */
+@media(prefers-color-scheme:dark){
+  :root{color-scheme:dark;--muted:#aab7b0}
+  body{background:#17201c}
+
+  .card-heading p,.char-count,.field>span:first-child,.model-summary small,
+  .token-estimate>div span,.token-estimate p,.token-estimate small,.token-empty-hint,
+  .verification-flow small,.cost-note,.loading-state p,.mobile-menu-panel section>span{
+    color:var(--muted)
+  }
+
+  .sentence-input{
+    background:#151e1a;
+    border:1px solid #3a4941;
+    color:#eef3f0;
+    caret-color:#a8cfbf
+  }
+  .sentence-input::placeholder{color:#93a099}
+  .sentence-input:focus{
+    background:#18231e;
+    border-color:#719889;
+    outline:3px solid rgba(141,181,165,.28)
+  }
+
+  .analyze-button,.primary-button,.result-summary,.brand-mark,.orbit-center{
+    background:#31594c;
+    color:#fff
+  }
+  .language-pill{color:#31594c}
+
+  .icon-button:hover,.secondary-button:hover,.card-controls button:hover,
+  .copy-module:hover,.module-rail button:hover,.segment-item:hover,.segment-item:focus{
+    background:#2a3931;
+    color:#d8e5df
+  }
+
+  .segment-explanation,.accuracy-note,.module-rail button,.data-label,.fact>span,
+  .translation-step.literal p,.translation-step.process p,.grammar-card>p,
+  .vocab-row p,.example-grid small,.privacy-hero p,.privacy-detail-list p,
+  .issue-change,.comparison-expressions span{
+    color:#aab7b0
+  }
+
+  .data-chips span,.flow-dot,.function-pill,.example-line span,.unfold-steps b,
+  .verification-flow>div>span{
+    background:#2b4238;
+    color:#b9d8cb
+  }
+  .source-display mark{background:#674326;color:#fff2e8;box-shadow:0 0 0 2px #674326}
+  .preset-list em{color:#7f3c1d}
+}
