@@ -1,6 +1,7 @@
 import type { LLMProvider } from './types'
 import type { ProviderConfig } from '../types/config'
 import { parseAnalysisResult, parseComparisonResult, parseCorrectionResult } from '../analysis/schemas'
+import { buildSourceMessage } from '../analysis/prompt-builder'
 import { ProviderError, friendlyError } from './errors'
 
 interface ChatCompletionData {
@@ -95,9 +96,7 @@ export const openAICompatibleProvider: LLMProvider = {
   },
   async analyze(request, config, apiKey, signal) {
     try {
-      const sourceContent = request.mode === 'compare'
-        ? `<source_text>${request.text}</source_text>\n<comparison_text>${request.comparisonText ?? ''}</comparison_text>`
-        : `<source_text>${request.text}</source_text>`
+      const sourceContent = buildSourceMessage(request.text, request.mode ?? 'analyze', request.comparisonText)
       const messages = [{ role: 'system', content: request.prompt }, { role: 'user', content: sourceContent }]
       let data = await send(config, apiKey, messages, signal)
       const responses = [data]

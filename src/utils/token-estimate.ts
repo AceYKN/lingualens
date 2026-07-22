@@ -1,4 +1,4 @@
-import { buildPrompt } from '../analysis/prompt-builder'
+import { buildPrompt, buildSourceMessage } from '../analysis/prompt-builder'
 import type { TaskMode } from '../types/analysis'
 import type { AnalysisConfig } from '../types/config'
 
@@ -33,9 +33,7 @@ export function estimateAnalysisTokens(
   comparisonText = '',
 ): TokenEstimate {
   const prompt = buildPrompt(text, config, mode)
-  const sourceContent = mode === 'compare'
-    ? `<source_text>${text}</source_text>\n<comparison_text>${comparisonText}</comparison_text>`
-    : `<source_text>${text}</source_text>`
+  const sourceContent = buildSourceMessage(text, mode, comparisonText)
   const input = estimateTextTokens(`${prompt}\n${sourceContent}`) + 8
   const sourceTokens = estimateTextTokens(mode === 'compare' ? `${text}\n${comparisonText}` : text)
   const lengthFactor = Math.min(4, Math.max(0.8, 0.78 + sourceTokens / 90))

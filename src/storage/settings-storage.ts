@@ -1,14 +1,15 @@
 import { z } from 'zod'
 import type { AppConfig } from '../types/config'
 import { DEFAULT_PROVIDER } from '../types/config'
-import { DEFAULT_ANALYSIS } from '../analysis/presets'
+import { ANALYSIS_MODULE_IDS } from '../analysis/modules'
+import { DEFAULT_ANALYSIS, cloneAnalysisConfig, normalizeAnalysisConfig } from '../analysis/presets'
 import type { ConnectionMode } from '../public-service/types'
 
 const SETTINGS_KEY = 'lingualens:settings:v1'
 const API_KEY = 'lingualens:api-key:v1'
 const CONNECTION_MODE = 'lingualens:connection-mode:v1'
 
-export const defaultAppConfig = (): AppConfig => ({ version: 1, provider: { ...DEFAULT_PROVIDER }, analysis: { ...DEFAULT_ANALYSIS, modules: { ...DEFAULT_ANALYSIS.modules }, moduleDepths: { ...DEFAULT_ANALYSIS.moduleDepths } } })
+export const defaultAppConfig = (): AppConfig => ({ version: 1, provider: { ...DEFAULT_PROVIDER }, analysis: cloneAnalysisConfig(DEFAULT_ANALYSIS) })
 
 const importedSchema = z.object({
   version: z.literal(1),
@@ -19,14 +20,20 @@ const importedSchema = z.object({
   analysis: z.object({
     sourceLanguage: z.string(), explanationLanguage: z.string(), translationLanguage: z.string(), preset: z.enum(['quick', 'standard', 'deep', 'custom']),
     detail: z.enum(['minimal', 'concise', 'standard', 'detailed', 'expert']), learnerLevel: z.enum(['beginner-zero', 'beginner', 'intermediate', 'advanced', 'linguist']),
-    terminology: z.enum(['plain', 'explained', 'professional']), modules: z.record(z.string(), z.boolean()), moduleDepths: z.record(z.string(), z.enum(['minimal', 'concise', 'standard', 'detailed', 'expert'])),
+    terminology: z.enum(['plain', 'explained', 'professional']),
+    modules: z.record(z.string(), z.boolean()).refine((value) => Object.keys(value).every((id) => ANALYSIS_MODULE_IDS.includes(id))),
+    moduleDepths: z.record(z.string(), z.enum(['minimal', 'concise', 'standard', 'detailed', 'expert'])).refine((value) => Object.keys(value).every((id) => ANALYSIS_MODULE_IDS.includes(id))),
     customInstructions: z.string().max(10000), promptTemplate: z.string().max(30000), outputFormat: z.enum(['cards', 'markdown', 'json', 'text']),
     maxInputLength: z.number().int().min(1).max(50000), exampleCount: z.number().int().min(0).max(10),
   }).strict(),
 }).strict()
 
+function normalizeAppConfig(config: AppConfig): AppConfig {
+  return { ...config, analysis: normalizeAnalysisConfig(config.analysis) }
+}
+
 export function loadSettings(): AppConfig {
-  try { const raw = localStorage.getItem(SETTINGS_KEY); return raw ? importedSchema.parse(JSON.parse(raw)) : defaultAppConfig() } catch { return defaultAppConfig() }
+  try { const raw = localStorage.getItem(SETTINGS_KEY); return raw ? normalizeAppConfig(importedSchema.parse(JSON.parse(raw))) : defaultAppConfig() } catch { return defaultAppConfig() }
 }
 
 export function saveSettings(config: AppConfig) {
@@ -39,4 +46,4 @@ export function saveApiKey(key: string) { if (key) localStorage.setItem(API_KEY,
 export function loadConnectionMode(): ConnectionMode { return localStorage.getItem(CONNECTION_MODE) === 'byok' ? 'byok' : 'public' }
 export function saveConnectionMode(mode: ConnectionMode) { localStorage.setItem(CONNECTION_MODE, mode) }
 export function clearAllData() { localStorage.removeItem(SETTINGS_KEY); localStorage.removeItem(API_KEY); localStorage.removeItem(CONNECTION_MODE) }
-export function parseImportedConfig(raw: string): AppConfig { return importedSchema.parse(JSON.parse(raw)) }
+export function parseImportedConfig(raw: string): AppConfig { return normalizeAppConfig(importedSchema.parse(JSON.parse(raw))) }

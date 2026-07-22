@@ -66,7 +66,7 @@ describe('public service boundary', () => {
   })
 
   it('accepts an allowlisted request and completes the Turnstile and DeepSeek flow', async () => {
-    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url.includes('/turnstile/v0/siteverify')) {
         return new Response(JSON.stringify({ success: true, action: 'analyze', hostname: 'example.com' }), {
@@ -75,6 +75,10 @@ describe('public service boundary', () => {
         })
       }
       if (url === 'https://api.deepseek.com/chat/completions') {
+        const outbound = JSON.parse(String(init?.body)) as { messages: Array<{ role: string; content: string }> }
+        expect(outbound.messages[0].content).toContain('"summary"')
+        expect(outbound.messages[0].content).not.toContain('"pronunciation"')
+        expect(JSON.parse(outbound.messages[1].content)).toMatchObject({ task: 'analyze', sourceText: 'A short sentence.' })
         return new Response(JSON.stringify({
           choices: [{ finish_reason: 'stop', message: { content: JSON.stringify({
             metadata: { detectedLanguage: 'English' },

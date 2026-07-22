@@ -12,15 +12,15 @@ interface Props { result: AnalysisResult; enabled: Record<string, boolean>; usag
 type RecordItem = Record<string, unknown>
 
 const moduleMeta: Record<string, { label: string; hint: string; icon: LucideIcon }> = {
-  translations: { label: '翻译', hint: '从结构到自然表达', icon: Languages },
-  segments: { label: '分段', hint: '看清句子的组成', icon: Braces },
-  grammar: { label: '语法', hint: '形式、功能与例句', icon: BookOpenText },
-  vocabulary: { label: '词汇', hint: '语境义与词形', icon: TextSearch },
-  structure: { label: '结构', hint: '语序、修饰与省略', icon: GitBranch },
-  pronunciation: { label: '发音', hint: '读音与标注', icon: AudioLines },
-  usage: { label: '语用', hint: '语气、语域与场景', icon: MessageCircleMore },
-  ambiguities: { label: '歧义', hint: '其他合理解释', icon: TriangleAlert },
-  examples: { label: '例句', hint: '把结构迁移出去', icon: Lightbulb },
+  translations: { label: '意思与翻译', hint: '从原文结构到自然表达', icon: Languages },
+  segments: { label: '成分拆解', hint: '看清句子如何组成', icon: Braces },
+  grammar: { label: '语法与句型', hint: '形式、功能与判断依据', icon: BookOpenText },
+  vocabulary: { label: '词语与搭配', hint: '语境义、词形和搭配', icon: TextSearch },
+  structure: { label: '语序结构', hint: '语序、修饰范围与省略', icon: GitBranch },
+  pronunciation: { label: '读音提示', hint: '读音与标注体系', icon: AudioLines },
+  usage: { label: '语气与场景', hint: '语域、礼貌和适用场合', icon: MessageCircleMore },
+  ambiguities: { label: '歧义与上下文', hint: '其他解释和判断条件', icon: TriangleAlert },
+  examples: { label: '迁移例句', hint: '把目标结构用到新句子', icon: Lightbulb },
 }
 
 const keyLabels: Record<string, string> = {
@@ -122,13 +122,13 @@ export function ResultView({ result, enabled, usage, onSegmentHover }: Props) {
 
   return <section className="results" aria-live="polite">
     <div className="result-summary">
-      <div className="summary-top"><span className="language-pill">{result.metadata.detectedLanguage || '未知语言'}</span>{result.summary.difficulty && <span className="difficulty">难度 · {result.summary.difficulty}</span>}{usage && <span className="usage-pill">实际 · {usage.totalTokens.toLocaleString()} tokens</span>}<Confidence value={result.metadata.confidence} /></div>
-      <span className="eyebrow light"><Sparkles size={14} />一句话看懂</span><h2>{result.summary.meaning || result.translations?.natural || '分析完成'}</h2>
-      {result.translations?.natural && result.translations.natural.trim() !== result.summary.meaning.trim() && <p className="natural-translation">{result.translations.natural}</p>}
-      {result.summary.keyGrammar?.length ? <div className="tag-list">{result.summary.keyGrammar.map((item) => <span key={item}>{item}</span>)}</div> : null}
+      <div className="result-summary-copy"><div className="summary-top"><span className="language-pill">{result.metadata.detectedLanguage || '未知语言'}</span>{result.summary.difficulty && <span className="difficulty">{result.summary.difficulty}</span>}{usage && <span className="usage-pill">{usage.totalTokens.toLocaleString()} tokens</span>}<Confidence value={result.metadata.confidence} /></div><span className="eyebrow light"><Sparkles size={14} />分析结论</span><h2>{result.summary.meaning || result.translations?.natural || '分析完成'}</h2>
+        {result.translations?.natural && result.translations.natural.trim() !== result.summary.meaning.trim() && <div className="summary-translation"><span>自然表达</span><p>{result.translations.natural}</p></div>}
+        {result.summary.keyGrammar?.length ? <div className="tag-list">{result.summary.keyGrammar.map((item) => <span key={item}>{item}</span>)}</div> : null}
+      </div>
     </div>
 
-    <div className="result-toolbar"><div><h3>分析工作台</h3><p>按主题查看，避免信息重复堆叠；分段内容可与原文联动。</p></div><div className="toolbar-actions">
+    <div className="result-toolbar"><div className="toolbar-actions">
       <button className="secondary-button small" onClick={() => copy('all', result)}>{copied === 'all' ? <Check size={16} /> : <Copy size={16} />}复制全部</button>
       <button className="secondary-button small" onClick={() => downloadFile('lingualens-analysis.md', resultToMarkdown(result), 'text/markdown')}><FileText size={16} />Markdown</button>
       <button className="secondary-button small" onClick={() => downloadFile('lingualens-analysis.json', JSON.stringify(result, null, 2), 'application/json')}><FileJson size={16} />JSON</button>
@@ -136,10 +136,10 @@ export function ResultView({ result, enabled, usage, onSegmentHover }: Props) {
     </div></div>
 
     {active && current && <div className="analysis-workbench">
-      <nav className="module-rail" aria-label="分析模块">{available.map((key) => { const meta = moduleMeta[key]; if (!meta) return null; const Icon = meta.icon; return <button className={active === key ? 'active' : ''} onClick={() => { setActive(key); onSegmentHover(null) }} aria-current={active === key ? 'page' : undefined} aria-label={`${meta.label}：${meta.hint}`} key={key}><Icon size={18} /><span><strong>{meta.label}</strong><small>{meta.hint}</small></span></button> })}</nav>
+      <nav className="module-rail" aria-label="分析模块">{available.map((key) => { const meta = moduleMeta[key]; if (!meta) return null; const Icon = meta.icon; return <button className={active === key ? 'active' : ''} onClick={() => { setActive(key); onSegmentHover(null) }} aria-current={active === key ? 'page' : undefined} aria-label={`${meta.label}：${meta.hint}`} key={key}><Icon size={18} /><span><strong>{meta.label}</strong></span></button> })}</nav>
       <div className="module-stage">
-        <header><div className="stage-title"><span className="stage-icon">{(() => { const Icon = current.icon; return <Icon size={20} /> })()}</span><div><h3>{current.label}</h3><p>{current.hint}</p></div></div><button className="copy-module" onClick={() => copy(active, result[active])}>{copied === active ? <Check size={16} /> : <Copy size={16} />}{copied === active ? '已复制' : '复制本模块'}</button></header>
-        <div className="module-content">{renderModule(active, result, onSegmentHover)}</div>
+        <header><div className="stage-title"><span className="stage-icon">{(() => { const Icon = current.icon; return <Icon size={20} /> })()}</span><div><h3>{current.label}</h3></div></div><button className="copy-module" onClick={() => copy(active, result[active])}>{copied === active ? <Check size={16} /> : <Copy size={16} />}{copied === active ? '已复制' : '复制本模块'}</button></header>
+        <div className="module-content" key={active}>{renderModule(active, result, onSegmentHover)}</div>
       </div>
     </div>}
     <div className="accuracy-note"><Info size={16} /><span>AI 生成的语法、翻译与发音信息可能存在错误。低置信度内容需要结合上下文核实。</span></div>

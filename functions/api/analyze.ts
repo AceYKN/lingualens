@@ -1,8 +1,8 @@
 import { z } from 'zod'
-import { buildPrompt } from '../../src/analysis/prompt-builder'
+import { buildPrompt, buildSourceMessage } from '../../src/analysis/prompt-builder'
 import { LANGUAGES, EXPLANATION_LANGUAGES } from '../../src/analysis/languages'
-import { ANALYSIS_MODULES, allModuleDepths } from '../../src/analysis/modules'
-import { DEFAULT_ANALYSIS } from '../../src/analysis/presets'
+import { ANALYSIS_MODULES } from '../../src/analysis/modules'
+import { DEFAULT_ANALYSIS, normalizeAnalysisConfig, resolvedModuleDepth } from '../../src/analysis/presets'
 import { parseAnalysisResult, parseComparisonResult, parseCorrectionResult } from '../../src/analysis/schemas'
 import { PUBLIC_DAILY_LIMIT, PUBLIC_INPUT_LIMIT, PUBLIC_MINUTE_LIMIT } from '../../src/public-service/types'
 import type { AnalysisConfig, DetailLevel } from '../../src/types/config'
@@ -53,8 +53,8 @@ class ApiError extends Error {
 
 function safeAnalysis(input: z.infer<typeof analysisSchema>): AnalysisConfig {
   const modules = Object.fromEntries(moduleIds.map((id) => [id, Boolean(input.modules[id])]))
-  const moduleDepths = Object.fromEntries(moduleIds.map((id) => [id, input.moduleDepths[id] ?? allModuleDepths[id]])) as Record<string, DetailLevel>
-  return {
+  const moduleDepths = Object.fromEntries(Object.entries(input.moduleDepths).filter(([id]) => moduleIds.includes(id))) as Record<string, DetailLevel>
+  return normalizeAnalysisConfig({
     ...DEFAULT_ANALYSIS,
     ...input,
     modules,
@@ -63,17 +63,17 @@ function safeAnalysis(input: z.infer<typeof analysisSchema>): AnalysisConfig {
     promptTemplate: DEFAULT_ANALYSIS.promptTemplate,
     outputFormat: 'cards',
     maxInputLength: PUBLIC_INPUT_LIMIT,
-  }
+  })
 }
 
 function outputBudget(analysis: AnalysisConfig, env: PublicEnv) {
   const ceiling = publicOutputCeiling(env)
-  if (analysis.preset === 'quick') return Math.min(5000, ceiling)
-  if (analysis.preset === 'standard') return Math.min(9000, ceiling)
-  if (analysis.preset === 'deep') return ceiling
-  const activeModules = Object.values(analysis.modules).filter(Boolean).length
-  const detailBonus = analysis.detail === 'expert' ? 3000 : analysis.detail === 'detailed' ? 1500 : 0
-  return Math.min(ceiling, 4000 + activeModules * 900 + detailBonus)
+  const depthBudget: Record<DetailLevel, number> = { minimal: 280, concise: 480, standard: 760, detailed: 1050, expert: 1400 }
+  const moduleBudget = ANALYSIS_MODULES
+    .filter((module) => module.required || analysis.modules[module.id])
+    .reduce((sum, module) => sum + depthBudget[resolvedModuleDepth(analysis, module.id)], 0)
+  const exampleBudget = analysis.modules.examples ? analysis.exampleCount * 180 : 0
+  return Math.min(ceiling, Math.max(4000, 1800 + moduleBudget + exampleBudget))
 }
 
 function taipeiDate() {
@@ -208,9 +208,7 @@ export async function onRequestPost({ request, env }: PagesContextLike) {
     const quota = await consumeQuota(env, request)
     const analysis = safeAnalysis(input.analysis)
     const maxTokens = outputBudget(analysis, env)
-    const sourceContent = input.mode === 'compare'
-      ? `<source_text>${input.text}</source_text>\n<comparison_text>${input.comparisonText}</comparison_text>`
-      : `<source_text>${input.text}</source_text>`
+    const sourceContent = buildSourceMessage(input.text, input.mode, input.comparisonText)
     const messages = [
       { role: 'system', content: buildPrompt(input.text, analysis, input.mode) },
       { role: 'user', content: sourceContent },
